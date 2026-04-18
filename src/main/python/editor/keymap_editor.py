@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 import json
 
-from PyQt5.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QMessageBox, QWidget
+from PyQt5.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QMessageBox, QWidget, QLineEdit
 from PyQt5.QtCore import Qt, pyqtSignal
 
 from any_keycode_dialog import AnyKeycodeDialog
@@ -40,6 +40,29 @@ class KeymapEditor(BasicEditor):
         layout_labels_container.addStretch()
         layout_labels_container.addLayout(self.layout_size)
 
+        # layer names
+        self.layer_name_edit = QLineEdit()
+        self.layer_name_edit.setPlaceholderText(tr("KeymapEditor", "Layer name"))
+        self.layer_name_edit.setMaxLength(16)
+        self.layer_name_edit.setFixedWidth(220)
+        self.layer_name_edit.setEnabled(False)
+
+        self.layer_name_apply_btn = SquareButton(tr("KeymapEditor", "Apply"))
+        self.layer_name_apply_btn.setFocusPolicy(Qt.NoFocus)
+        self.layer_name_apply_btn.setCheckable(False)
+        self.layer_name_apply_btn.setEnabled(False)
+        self.layer_name_apply_btn.clicked.connect(lambda *_: self.apply_layer_name())
+
+        layer_name_layout = QVBoxLayout()
+        layer_name_layout.setContentsMargins(0, 0, 0, 0)
+        layer_name_layout.addWidget(QLabel(tr("KeymapEditor", "Layer name")))
+        layer_name_layout.addWidget(self.layer_name_edit)
+        layer_name_layout.addWidget(self.layer_name_apply_btn)
+
+        layout_labels_container.addLayout(layer_name_layout)
+
+        self.layer_name_edit.textEdited.connect(lambda _: self.layer_name_apply_btn.setEnabled(True))
+        self.layer_name_edit.returnPressed.connect(self.apply_layer_name)
         # contains the actual keyboard
         self.container = KeyboardWidget(layout_editor)
         self.container.clicked.connect(self.on_key_clicked)
@@ -120,6 +143,7 @@ class KeymapEditor(BasicEditor):
             self.container.set_keys(self.keyboard.keys, self.keyboard.encoders)
 
             self.current_layer = 0
+            self.refresh_layer_names_editor()
             self.on_layout_changed()
 
             self.tabbed_keycodes.recreate_keycode_buttons()
@@ -187,6 +211,7 @@ class KeymapEditor(BasicEditor):
         self.container.deselect()
         self.current_layer = idx
         self.refresh_layer_display()
+        self.refresh_layer_names_editor()
 
     def set_key(self, keycode):
         """ Change currently selected key to provided keycode """
@@ -253,3 +278,52 @@ class KeymapEditor(BasicEditor):
 
     def on_keymap_override(self):
         self.refresh_layer_display()
+
+    def layer_names_supported(self):
+        return self.keyboard is not None and hasattr(self.keyboard, "layer_name_set") and hasattr(self.keyboard, "layer_name_get")
+    
+    def refresh_layer_names_editor(self):
+        if not self.layer_names_supported():
+            self.layer_name_edit.setText("")
+            self.layer_name_edit.setEnabled(False)
+            self.layer_name_apply_btn.setEnabled(False)
+            return
+        
+        if hasattr(self.keyboard, "layer_names"):
+            try:
+                self.keyboard.reload_layer_names()
+            except Exception:
+                self.layer_name_edit.setText("")
+                self.layer_name_edit.setEnabled(False)
+                self.layer_name_apply_btn.setEnabled(False)
+                return
+        
+        name = ""
+        if self.current_layer < len(self.keyboard.layer_names):
+            name = self.keyboard.layer_names[self.current_layer] or ""
+        
+        self.layer_name_edit.blockSignals(True)
+        self.layer_name_edit.setText(name)
+        self.layer_name_edit.blockSignals(False)
+
+        self.layer_name_edit.setEnabled(True)
+        self.layer_name_apply_btn.setEnabled(False)
+    
+    def apply_layer_name(self):
+        if not self.layer_names_supported():
+            return
+        
+        new_name = self.layer_name_edit.text()
+        try:
+            self.keyboard.layer_name_set(self.current_layer, new_name)
+            if hasattr(self.keyboard, "layer_names") and self.current_layer < len(self.keyboard.layer_names):
+                self.keyboard.layer_names[self.current_layer] = new_name[:16]
+            self.layer_name_apply_btn.setEnabled(False)
+        except Exception as e:
+            QMessageBox.warning(
+                self.widget(),
+                tr("KeymapEditor", "Error"),
+                tr("KeymapEditor", "Failed to set layer name: {}").format(repr(e))
+            )
+
+            self.refresh_layer_names_editor()

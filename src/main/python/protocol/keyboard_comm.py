@@ -405,6 +405,12 @@ class Keyboard(ProtocolMacro, ProtocolDynamic, ProtocolTapDance, ProtocolCombo, 
         data["key_override"] = self.save_key_override()
         data["alt_repeat_key"] = self.save_alt_repeat_key()
         data["settings"] = self.settings
+        data["layer_names"] = []
+        if hasattr(self, "layer_names"):
+            try:
+                data["layer_names"] = self.layer_names[:self.layers]
+            except Exception:
+                pass
 
         return json.dumps(data).encode("utf-8")
 
@@ -440,6 +446,19 @@ class Keyboard(ProtocolMacro, ProtocolDynamic, ProtocolTapDance, ProtocolCombo, 
             qsid = int(qsid)
             if QmkSettings.is_qsid_supported(qsid):
                 self.qmk_settings_set(qsid, value)
+        
+        layer_names = data.get("layer_names")
+        if layer_names and hasattr(self, "layer_name_set"):
+            for idx, name in enumerate(layer_names):
+                if idx < self.layers:
+                    try:
+                        self.layer_name_set(idx, name)
+                    except Exception:
+                        pass
+            try:
+                self.reload_layer_names()
+            except Exception:
+                pass
 
     def reset(self):
         self.usb_send(self.dev, struct.pack("B", 0xB))

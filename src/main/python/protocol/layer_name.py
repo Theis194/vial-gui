@@ -36,7 +36,6 @@ class ProtocolLayerName(BaseProtocol):
         msg = struct.pack("BBBB", CMD_VIA_VIAL_PREFIX, CMD_VIAL_DYNAMIC_ENTRY_OP, DYNAMIC_VIAL_LAYER_NAME_SET, layer) + raw
 
         resp = self.usb_send(self.dev, msg, retries=20)
-        print("SET reply first bytes:", list(resp[:8]))
 
         if resp[0] != 0:
             raise RuntimeError(f"Failed setting layer name for layer {layer}, status code: {resp[0]}")
