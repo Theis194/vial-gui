@@ -21,6 +21,7 @@ from protocol.dynamic import ProtocolDynamic
 from protocol.key_override import ProtocolKeyOverride
 from protocol.macro import ProtocolMacro
 from protocol.tap_dance import ProtocolTapDance
+from protocol.layer_name import ProtocolLayerName
 from unlocker import Unlocker
 from util import MSG_LEN, hid_send
 
@@ -32,7 +33,7 @@ class ProtocolError(Exception):
     pass
 
 
-class Keyboard(ProtocolMacro, ProtocolDynamic, ProtocolTapDance, ProtocolCombo, ProtocolKeyOverride, ProtocolAltRepeatKey):
+class Keyboard(ProtocolMacro, ProtocolDynamic, ProtocolTapDance, ProtocolCombo, ProtocolKeyOverride, ProtocolAltRepeatKey, ProtocolLayerName):
     """ Low-level communication with a vial-enabled keyboard """
 
     def __init__(self, dev, usb_send=hid_send):
@@ -97,6 +98,7 @@ class Keyboard(ProtocolMacro, ProtocolDynamic, ProtocolTapDance, ProtocolCombo, 
         self.reload_combo()
         self.reload_key_override()
         self.reload_alt_repeat_key()
+        self.reload_layer_names()
 
     def reload_layers(self):
         """ Get how many layers the keyboard has """
@@ -403,6 +405,12 @@ class Keyboard(ProtocolMacro, ProtocolDynamic, ProtocolTapDance, ProtocolCombo, 
         data["key_override"] = self.save_key_override()
         data["alt_repeat_key"] = self.save_alt_repeat_key()
         data["settings"] = self.settings
+        data["layer_names"] = []
+        if hasattr(self, "layer_names"):
+            try:
+                data["layer_names"] = self.layer_names[:self.layers]
+            except Exception:
+                pass
 
         return json.dumps(data).encode("utf-8")
 
@@ -438,6 +446,19 @@ class Keyboard(ProtocolMacro, ProtocolDynamic, ProtocolTapDance, ProtocolCombo, 
             qsid = int(qsid)
             if QmkSettings.is_qsid_supported(qsid):
                 self.qmk_settings_set(qsid, value)
+        
+        layer_names = data.get("layer_names")
+        if layer_names and hasattr(self, "layer_name_set"):
+            for idx, name in enumerate(layer_names):
+                if idx < self.layers:
+                    try:
+                        self.layer_name_set(idx, name)
+                    except Exception:
+                        pass
+            try:
+                self.reload_layer_names()
+            except Exception:
+                pass
 
     def reset(self):
         self.usb_send(self.dev, struct.pack("B", 0xB))
