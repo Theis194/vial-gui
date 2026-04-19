@@ -34,12 +34,6 @@ class KeymapEditor(BasicEditor):
         self.layout_size = QVBoxLayout()
         layer_label = QLabel(tr("KeymapEditor", "Layer"))
 
-        layout_labels_container = QHBoxLayout()
-        layout_labels_container.addWidget(layer_label)
-        layout_labels_container.addLayout(self.layout_layers)
-        layout_labels_container.addStretch()
-        layout_labels_container.addLayout(self.layout_size)
-
         # layer names
         self.layer_name_edit = QLineEdit()
         self.layer_name_edit.setPlaceholderText(tr("KeymapEditor", "Layer name"))
@@ -51,18 +45,38 @@ class KeymapEditor(BasicEditor):
         self.layer_name_apply_btn.setFocusPolicy(Qt.NoFocus)
         self.layer_name_apply_btn.setCheckable(False)
         self.layer_name_apply_btn.setEnabled(False)
+        self.layer_name_apply_btn.setFixedWidth(70)
+        self.layer_name_apply_btn.setFixedHeight(25)
         self.layer_name_apply_btn.clicked.connect(lambda *_: self.apply_layer_name())
 
-        layer_name_layout = QVBoxLayout()
-        layer_name_layout.setContentsMargins(0, 0, 0, 0)
+        layer_name_layout = QHBoxLayout()
+        layer_name_layout.setSpacing(6)
         layer_name_layout.addWidget(QLabel(tr("KeymapEditor", "Layer name")))
         layer_name_layout.addWidget(self.layer_name_edit)
         layer_name_layout.addWidget(self.layer_name_apply_btn)
-
-        layout_labels_container.addLayout(layer_name_layout)
+        layer_name_layout.addStretch(1)
 
         self.layer_name_edit.textEdited.connect(lambda _: self.layer_name_apply_btn.setEnabled(True))
         self.layer_name_edit.returnPressed.connect(self.apply_layer_name)
+
+        layout_labels_container = QHBoxLayout()
+        layout_labels_container.setSpacing(6)
+
+        layers = QHBoxLayout()
+        layers.setContentsMargins(0,0,0,0)
+        layers.setSpacing(6)
+        layers.addWidget(layer_label)
+        layers.addLayout(self.layout_layers)
+
+        layers_and_name = QVBoxLayout()
+        layers_and_name.setSpacing(4)
+        layers_and_name.addLayout(layers)
+        layers_and_name.addLayout(layer_name_layout)
+
+        layout_labels_container.addLayout(layers_and_name)
+        layout_labels_container.addStretch(1)
+        layout_labels_container.addLayout(self.layout_size)
+        
         # contains the actual keyboard
         self.container = KeyboardWidget(layout_editor)
         self.container.clicked.connect(self.on_key_clicked)
