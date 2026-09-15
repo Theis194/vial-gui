@@ -74,11 +74,18 @@ jobs:
         if ((Get-FileHash nsis-3.06.1-setup.exe -Algorithm sha256).Hash -ne "f60488a676308079bfdf6845dc7114cfd4bbff47b66be4db827b89bb8d7fdc52") { Write-Error 'SHA256 mismatch' }
         Start-Process -FilePath "nsis-3.06.1-setup.exe" -ArgumentList "/S", "/D=C:\Program Files (x86)\NSIS" -NoNewWindow -Wait
 
-    - name: Install Visual C++ Redistributable
+    - name: Install Visual C++ Redistributable (2010, provides msvcr100.dll)
       run: |
-        Invoke-WebRequest -Uri "https://download.microsoft.com/download/3/2/2/3224B87F-CFA0-4E70-BDA3-3DE650EFEBA5/vcredist_x64.exe" -OutFile "vcredist_x64.exe"
-        Start-Process -FilePath "vcredist_x64.exe" -ArgumentList "/install", "/quiet", "/norestart" -Wait
-        Remove-Item "vcredist_x64.exe"
+        Invoke-WebRequest -Uri "https://download.microsoft.com/download/3/2/2/3224B87F-CFA0-4E70-BDA3-3DE650EFEBA5/vcredist_x64.exe" -OutFile "vcredist2010_x64.exe"
+        Start-Process -FilePath "vcredist2010_x64.exe" -ArgumentList "/install", "/quiet", "/norestart" -Wait
+        Remove-Item "vcredist2010_x64.exe"
+
+    - name: Install Visual C++ Redistributable (2012, provides msvcr110.dll)
+      run: |
+        Invoke-WebRequest -Uri "https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x64.exe" -OutFile "vcredist2012_x64.exe"
+        if ((Get-FileHash vcredist2012_x64.exe -Algorithm md5).Hash -ne "3C03562B5AF9ED347614053D459D7778") { Write-Error 'MD5 mismatch' }
+        Start-Process -FilePath "vcredist2012_x64.exe" -ArgumentList "/install", "/quiet", "/norestart" -Wait
+        Remove-Item "vcredist2012_x64.exe"
 
     - name: Build
       run: |
